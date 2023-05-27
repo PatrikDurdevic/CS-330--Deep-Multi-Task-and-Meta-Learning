@@ -179,7 +179,16 @@ class MAML:
         # Make sure to populate accuracies and update parameters.
         # Use F.cross_entropy to compute classification losses.
         # Use util.score to compute accuracies.
+        for i in range(self._num_inner_steps):
+            logits = self._forward(images, parameters)
 
+            accuracies.append(util.score(logits, labels))
+
+            loss = F.cross_entropy(logits, labels)
+            grads = torch.autograd.grad(outputs=loss, inputs=parameters.values(), create_graph=train)
+
+            for i_k, k in enumerate(parameters.keys()):
+                parameters[k] = parameters[k] - self._inner_lrs[k] * grads[i_k]
         # ********************************************************
         # ******************* YOUR CODE HERE *********************
         # ********************************************************
@@ -220,7 +229,12 @@ class MAML:
             # Use util.score to compute accuracies.
             # Make sure to populate outer_loss_batch, accuracies_support_batch,
             # and accuracy_query_batch.
+            parameters, accuracies = self._inner_loop(images_support, labels_support, train)
+            logits = self._forward(images_query, parameters)
 
+            outer_loss_batch.append(F.cross_entropy(logits, labels_query))
+            accuracies_support_batch.append(accuracies)
+            accuracy_query_batch.append(util.score(logits, labels_query))
             # ********************************************************
             # ******************* YOUR CODE HERE *********************
             # ********************************************************
